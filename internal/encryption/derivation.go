@@ -6,6 +6,25 @@ import (
 	"golang.org/x/crypto/argon2"
 )
 
+// =-- Argon2 Parameters --= //
+
+// Argon2Params holds the standarzied Argon2 parameters for key derivation/hash
+type Argon2Params struct {
+	Time    uint32 // Number of iterations
+	Memory  uint32 // Memory cost (KB)
+	Threads uint8  // Number of threads
+	KeyLen  uint32 // Length of derived key (bytes)
+}
+
+var DefaultArgon2Params = Argon2Params{
+	Time:    2,         // 2 iterations
+	Memory:  64 * 1024, // 64 MB
+	Threads: 4,         // 4 threads
+	KeyLen:  32,        // 32-byte key for AES-256
+}
+
+// =-- Primary Functions --= //
+
 // GenerateSalt Generates a randomized salt given size in bytes
 func GenerateSalt(size int) (string, error) {
 	salt := make([]byte, size) // Create a byte slice of size
@@ -29,13 +48,9 @@ func DeriveKey(password string, saltB64 string) string {
 		panic(err)
 	}
 
-	time := uint32(2)        // 2 iterations
-	mem := uint32(64 * 1024) // 64 MB
-	threads := uint8(4)      // Use 4 threads for computation
-	keyLen := uint32(32)     // 32 bytes for 256-bit key
-
 	// Derive key
-	key := argon2.Key([]byte(password), salt, time, mem, threads, keyLen)
+	params := DefaultArgon2Params
+	key := argon2.Key([]byte(password), salt, params.Time, params.Memory, params.Threads, params.KeyLen)
 
 	// Encode key into Base64
 	encodedKey := base64.StdEncoding.EncodeToString(key)
