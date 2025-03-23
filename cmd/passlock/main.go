@@ -1,4 +1,4 @@
-package passlock
+package main
 
 import (
 	"fmt"
