@@ -1,24 +1,25 @@
-package encryption
+package tests
 
 import (
+	"github.com/cpainter1/PassLock/internal/encryption"
 	"testing"
 )
 
 func TestEncryptDecrypt(t *testing.T) {
 	// Generate a test key
 	password := "verysimplepassword"
-	salt, err := GenerateSalt(16)
+	salt, err := encryption.GenerateSalt(16)
 	if err != nil {
 		t.Fatalf("GenerateSalt failed in TestEncryptDecrypt: %v", err)
 	}
 
-	key := DeriveKey(password, salt)
+	key := encryption.DeriveKey(password, salt)
 	t.Logf("Derived key: %s", key)
 
 	// Encrypt a sample plaintext
 	plaintext := "Here's a very secret message..."
 
-	ciphertext, err := Encrypt(plaintext, key)
+	ciphertext, err := encryption.Encrypt(plaintext, key)
 	t.Logf("Encrypted ciphertext: %s", ciphertext)
 
 	if err != nil {
@@ -26,7 +27,7 @@ func TestEncryptDecrypt(t *testing.T) {
 	}
 
 	// Decrypt the ciphertext
-	decryptedPlaintext, err := Decrypt(ciphertext, key)
+	decryptedPlaintext, err := encryption.Decrypt(ciphertext, key)
 	t.Logf("Decrypted plaintext: %s", decryptedPlaintext)
 
 	if err != nil {
