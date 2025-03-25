@@ -5,37 +5,74 @@ import (
 	"log"
 )
 
-// =-- Standardized Password Entry Data Structure --= //
+// =-- Standardized EncryptedPassword Entry Data Structures --= //
 
+// PasswordInformation stores information for **output** password entry row dumps
+type PasswordInformation struct {
+	ID                int    // Unique ID
+	Service           string // Service (e.g., "github.com")
+	Username          string // Username for the account
+	EncryptedPassword string // Encrypted password
+	EncryptedNotes    string // Encrypted notes
+	CreatedAt         string // Timestamp for entry creation
+}
+
+// PasswordEntry stores information for **input** password entries
 type PasswordEntry struct {
-	ID        int    // Unique ID
-	Service   string // Service (e.g., "github.com")
-	Username  string // Username for the account
-	Password  []byte // Encrypted password
-	Notes     []byte // Encrypted notes
-	CreatedAt string // Timestamp for entry creation
+	Service           string // Service (e.g., "github.com")
+	Username          string // Username for the account
+	EncryptedPassword string // Encrypted password
+	EncryptedNotes    string // Encrypted notes
 }
 
 // =-- Database Management Functions --= //
 
-// StorePassword stores a new password entry in the database
-func StorePassword(db *sql.DB, service, username string, encryptedPassword, encryptedNotes []byte) error {
+// StorePassword stores a new password entry in the database and returns the row information as PasswordInformation struct
+func StorePassword(db *sql.DB, entry PasswordEntry) (*PasswordInformation, error) {
 	// Insert SQL query to add a new entry to the passwords table
 	insertSQL := `
     INSERT INTO passwords (service, username, password, notes) 
     VALUES (?, ?, ?, ?);`
 
 	// Execute the query with the parameters (service, username, encrypted password, and encrypted notes)
-	_, err := db.Exec(insertSQL, service, username, encryptedPassword, encryptedNotes)
+	result, err := db.Exec(
+		insertSQL,
+		entry.Service,
+		entry.Username,
+		entry.EncryptedPassword,
+		entry.EncryptedNotes)
 	if err != nil {
 		log.Printf("Error inserting password: %v", err)
-		return err
+		return nil, err
 	}
-	return nil
+
+	// Get last inserted row
+	lastID, err := result.LastInsertId()
+	if err != nil {
+		log.Printf("Error retrieving last insert ID: %v", err)
+		return nil, err
+	}
+
+	// Retrieve inserted row
+	query := `
+    SELECT id, service, username, password, notes, created_at 
+    FROM passwords 
+    WHERE id = ? LIMIT 1;`
+
+	row := db.QueryRow(query, lastID)
+
+	var inserted PasswordInformation
+	err = row.Scan(&inserted.ID, &inserted.Service, &inserted.Username, &inserted.EncryptedPassword, &inserted.EncryptedNotes, &inserted.CreatedAt)
+	if err != nil {
+		log.Printf("Error fetching inserted password entry with ID %d: %v", lastID, err)
+		return nil, err
+	}
+
+	return &inserted, nil
 }
 
 // GetEntryFromID retrieves all entry information for a unique entry ID
-func GetEntryFromID(db *sql.DB, id int) (*PasswordEntry, error) {
+func GetEntryFromID(db *sql.DB, id int) (*PasswordInformation, error) {
 	// Query to retrieve the entire row information for a specific ID
 	query := `
     SELECT id, service, username, password, notes, created_at 
@@ -45,22 +82,22 @@ func GetEntryFromID(db *sql.DB, id int) (*PasswordEntry, error) {
 	// Query the database and fetch the result
 	row := db.QueryRow(query, id)
 
-	// Initialize a PasswordEntry struct to hold the data
-	var entry PasswordEntry
+	// Initialize a PasswordInformation struct to hold the data
+	var entry PasswordInformation
 
-	// Scan the row into the PasswordEntry struct
-	err := row.Scan(&entry.ID, &entry.Service, &entry.Username, &entry.Password, &entry.Notes, &entry.CreatedAt)
+	// Scan the row into the PasswordInformation struct
+	err := row.Scan(&entry.ID, &entry.Service, &entry.Username, &entry.EncryptedPassword, &entry.EncryptedNotes, &entry.CreatedAt)
 	if err != nil {
 		log.Printf("Error fetching password entry with ID %d: %v", id, err)
 		return nil, err
 	}
 
-	// Return the populated PasswordEntry struct
+	// Return the populated PasswordInformation struct
 	return &entry, nil
 }
 
-// GetEntryFromService retrieves all password entries from a given service
-func GetEntriesFromService(db *sql.DB, service string) ([]PasswordEntry, error) {
+// GetEntriesFromService GetEntryFromService retrieves all password entries from a given service
+func GetEntriesFromService(db *sql.DB, service string) ([]*PasswordInformation, error) {
 	// Query to retrieve all entries for the given service
 	query := `
     SELECT id, service, username, password, notes, created_at 
@@ -76,19 +113,19 @@ func GetEntriesFromService(db *sql.DB, service string) ([]PasswordEntry, error) 
 	defer rows.Close()
 
 	// Slice to hold all the password entries
-	var entries []PasswordEntry
+	var entries []*PasswordInformation
 
-	// Loop through the rows and scan each one into a PasswordEntry
+	// Loop through the rows and scan each one into a PasswordInformation
 	for rows.Next() {
-		var entry PasswordEntry
-		err := rows.Scan(&entry.ID, &entry.Service, &entry.Username, &entry.Password, &entry.Notes, &entry.CreatedAt)
+		var entry PasswordInformation
+		err := rows.Scan(&entry.ID, &entry.Service, &entry.Username, &entry.EncryptedPassword, &entry.EncryptedNotes, &entry.CreatedAt)
 		if err != nil {
 			log.Printf("Error reading row for service '%s': %v", service, err)
 			return nil, err
 		}
 
 		// Append the entry to the slice
-		entries = append(entries, entry)
+		entries = append(entries, &entry)
 	}
 
 	// Check if there was an error during iteration
@@ -101,8 +138,49 @@ func GetEntriesFromService(db *sql.DB, service string) ([]PasswordEntry, error) 
 	return entries, nil
 }
 
-// DeletePassword deletes a specific password entry based on unique ID
-func DeletePassword(db *sql.DB, id int) error {
+// GetAllEntries returns all entries in the database as a list of PasswordInformation structs
+func GetAllEntries(db *sql.DB) ([]*PasswordInformation, error) {
+	// Set up SQL query
+	query := `
+	SELECT id, service, username, password, notes, created_at
+	FROM passwords;`
+
+	rows, err := db.Query(query)
+	if err != nil {
+		log.Printf("Error fetching entries for all entries: %v", err)
+		return nil, err
+	}
+	defer rows.Close()
+
+	// Iterate through rows
+	var entries []*PasswordInformation
+	for rows.Next() {
+		var entry PasswordInformation
+		// Input row information into PasswordInformation struct
+		err := rows.Scan(
+			&entry.ID,
+			&entry.Service,
+			&entry.Username,
+			&entry.EncryptedPassword,
+			&entry.EncryptedNotes,
+			&entry.CreatedAt)
+		if err != nil {
+			log.Printf("Error reading row for entry with ID %d: %v", entry.ID, err)
+			return nil, err
+		}
+		entries = append(entries, &entry)
+	}
+
+	if err := rows.Err(); err != nil {
+		log.Printf("Error iterating over rows: %v", err)
+		return nil, err
+	}
+
+	return entries, nil
+}
+
+// DeleteEntryFromID deletes a specific password entry based on unique ID
+func DeleteEntryFromID(db *sql.DB, id int) error {
 	// Query to delete the entry with the given ID
 	deleteSQL := `DELETE FROM passwords WHERE id = ?;`
 
@@ -113,7 +191,7 @@ func DeletePassword(db *sql.DB, id int) error {
 		return err
 	}
 
-	log.Printf("Password entry with ID %d has been deleted.", id)
+	log.Printf("EncryptedPassword entry with ID %d has been deleted.", id)
 	return nil
 }
 
