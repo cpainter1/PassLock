@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"runtime"
 
-	_ "github.com/mattn/go-sqlite3" // Used to init SQLite driver
+	_ "github.com/mattn/go-sqlite3" // REQUIRED - Used to init SQLite driver
 )
 
 // GetDatabasePath returns the OS-specific path for plockdb.sqlite
@@ -67,8 +67,8 @@ func InitDB() (*sql.DB, error) {
 		id INTEGER PRIMARY KEY AUTOINCREMENT,
 		service TEXT NOT NULL,
 		username TEXT NOT NULL,
-		password BLOB NOT NULL, -- AES-256 encrypted
-		notes BLOB,             -- Optional encrypted field
+		password TEXT NOT NULL, -- AES-256 encrypted
+		notes TEXT,             -- Optional encrypted field
 		created_at TIMESTAMP DEFAULT CURrENT_TIMESTAMP
 	);`
 
