@@ -69,7 +69,7 @@ func InitDB() (*sql.DB, error) {
 		username TEXT NOT NULL,
 		password TEXT NOT NULL, -- AES-256 encrypted
 		notes TEXT,             -- Optional encrypted field
-		created_at TIMESTAMP DEFAULT CURrENT_TIMESTAMP
+		created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 	);`
 
 	_, err = db.Exec(createTableSQL)
