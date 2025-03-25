@@ -110,7 +110,12 @@ func GetEntriesFromService(db *sql.DB, service string) ([]*PasswordInformation, 
 		log.Printf("Error fetching entries for service '%s': %v", service, err)
 		return nil, err
 	}
-	defer rows.Close()
+	defer func(rows *sql.Rows) {
+		err := rows.Close()
+		if err != nil {
+			log.Printf("Error closing rows: %v", err)
+		}
+	}(rows)
 
 	// Slice to hold all the password entries
 	var entries []*PasswordInformation
@@ -150,7 +155,12 @@ func GetAllEntries(db *sql.DB) ([]*PasswordInformation, error) {
 		log.Printf("Error fetching entries for all entries: %v", err)
 		return nil, err
 	}
-	defer rows.Close()
+	defer func(rows *sql.Rows) {
+		err := rows.Close()
+		if err != nil {
+			log.Printf("Error closing rows: %v", err)
+		}
+	}(rows)
 
 	// Iterate through rows
 	var entries []*PasswordInformation
