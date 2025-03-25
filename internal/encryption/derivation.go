@@ -8,7 +8,7 @@ import (
 
 // =-- Argon2 Parameters --= //
 
-// Argon2Params holds the standarzied Argon2 parameters for key derivation/hash
+// Argon2Params holds the standardized Argon2 parameters for key derivation/hash
 type Argon2Params struct {
 	Time    uint32 // Number of iterations
 	Memory  uint32 // Memory cost (KB)
@@ -17,7 +17,7 @@ type Argon2Params struct {
 }
 
 var DefaultArgon2Params = Argon2Params{
-	Time:    2,         // 2 iterations
+	Time:    6,         // 6 iterations
 	Memory:  64 * 1024, // 64 MB
 	Threads: 4,         // 4 threads
 	KeyLen:  32,        // 32-byte key for AES-256
@@ -50,7 +50,7 @@ func DeriveKey(password string, saltB64 string) string {
 
 	// Derive key
 	params := DefaultArgon2Params
-	key := argon2.Key([]byte(password), salt, params.Time, params.Memory, params.Threads, params.KeyLen)
+	key := argon2.IDKey([]byte(password), salt, params.Time, params.Memory, params.Threads, params.KeyLen)
 
 	// Encode key into Base64
 	encodedKey := base64.StdEncoding.EncodeToString(key)
