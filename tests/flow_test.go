@@ -24,7 +24,7 @@ func TestFullEncryptionFlow(t *testing.T) {
 		t.Errorf("Error generating salt: %v", err)
 	}
 
-	derivedMasterPassword := encryption.DeriveKey(inputMasterPassword, encryptionSalt)
+	derivedMasterPassword, _, _ := encryption.DeriveMasterKeys(inputMasterPassword, encryptionSalt)
 	t.Logf("DerivedMasterPassword: %v", derivedMasterPassword)
 
 	// Password and Notes Encryption
@@ -48,7 +48,7 @@ func TestFullEncryptionFlow(t *testing.T) {
 		EncryptedNotes:    encryptedNotes,
 	}
 
-	db, err := database.InitDB()
+	db, err := database.InitDB("TestingVault")
 	if err != nil {
 		t.Errorf("Error connecting to database: %v", err)
 	}
