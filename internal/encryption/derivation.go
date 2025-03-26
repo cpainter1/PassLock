@@ -20,7 +20,7 @@ var DefaultArgon2Params = Argon2Params{
 	Time:    6,         // 6 iterations
 	Memory:  64 * 1024, // 64 MB
 	Threads: 4,         // 4 threads
-	KeyLen:  32,        // 32-byte key for AES-256
+	KeyLen:  64,        // For two 32-byte key for AES-256 (K_enc, K_auth)
 }
 
 // =-- Primary Functions --= //
@@ -39,21 +39,21 @@ func GenerateSalt(size int) (string, error) {
 	return encodedSalt, nil
 }
 
-// DeriveKey Derives a key from password using argon2 given salt
-func DeriveKey(password string, saltB64 string) string {
+// DeriveMasterKeys Derives two keys (encryption, auth) from password using argon2 given salt
+func DeriveMasterKeys(password string, saltB64 string) (string, string, error) {
 	// Decode and format salt
 	salt, err := base64.StdEncoding.DecodeString(saltB64)
-
 	if err != nil {
-		panic(err)
+		return "", "", err
 	}
 
 	// Derive key
 	params := DefaultArgon2Params
-	key := argon2.IDKey([]byte(password), salt, params.Time, params.Memory, params.Threads, params.KeyLen)
+	masterKey := argon2.IDKey([]byte(password), salt, params.Time, params.Memory, params.Threads, params.KeyLen)
 
-	// Encode key into Base64
-	encodedKey := base64.StdEncoding.EncodeToString(key)
+	// Split the master 64-byte key into K_auth and K_enc
+	encryptionKey := masterKey[:32]
+	authenticationKey := masterKey[32:]
 
-	return encodedKey
+	return base64.StdEncoding.EncodeToString(encryptionKey), base64.StdEncoding.EncodeToString(authenticationKey), nil
 }
