@@ -1,6 +1,8 @@
 package tests
 
 import (
+	"database/sql"
+	"fmt"
 	"github.com/cpainter1/PassLock/internal/database"
 	"testing"
 )
@@ -8,10 +10,16 @@ import (
 // TestStorePassword tests the password storing database function, simultaneously tests the GetEntriesFromService func
 func TestStorePassword(t *testing.T) {
 	// Initialize db instance
-	db, err := database.InitDB()
+	db, err := database.InitDB("TestingVault")
 	if err != nil {
 		t.Errorf("Error connecting to database: %v", err)
 	}
+	defer func(db *sql.DB) {
+		err := db.Close()
+		if err != nil {
+			fmt.Println("Error closing db:", err)
+		}
+	}(db)
 
 	// Sample password information
 	var entry = database.PasswordEntry{
@@ -49,10 +57,16 @@ func TestStorePassword(t *testing.T) {
 // TestGetEntryFromID creates a sample password entry, obtains its ID, and then queries it using GetEntryFromID
 func TestGetEntryFromID(t *testing.T) {
 	// Initialize db instance
-	db, err := database.InitDB()
+	db, err := database.InitDB("TestingVault")
 	if err != nil {
 		t.Errorf("Error connecting to database: %v", err)
 	}
+	defer func(db *sql.DB) {
+		err := db.Close()
+		if err != nil {
+			fmt.Println("Error closing db:", err)
+		}
+	}(db)
 
 	// Create and store password entry
 	var entry = database.PasswordEntry{
@@ -93,10 +107,16 @@ func TestGetEntryFromID(t *testing.T) {
 // TestDeleteEntryFromID creates a password entry and deletes it, querying the whole database and testing GetAllEntries
 func TestDeleteEntryFromID(t *testing.T) {
 	// Initialize db instance
-	db, err := database.InitDB()
+	db, err := database.InitDB("TestingVault")
 	if err != nil {
 		t.Errorf("Error connecting to database: %v", err)
 	}
+	defer func(db *sql.DB) {
+		err := db.Close()
+		if err != nil {
+			fmt.Println("Error closing db:", err)
+		}
+	}(db)
 
 	// Create and store password entry
 	var entry = database.PasswordEntry{

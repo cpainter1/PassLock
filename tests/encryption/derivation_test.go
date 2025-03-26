@@ -45,15 +45,15 @@ func TestDeriveKey(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GenerateSalt failed in TestDeriveKey: %v", err)
 	}
-	key1 := encryption.DeriveKey(password1, salt1)
-	t.Logf("DeriveKey 1 key: %x", key1)
+	key1, _, _ := encryption.DeriveMasterKeys(password1, salt1)
+	t.Logf("DeriveMasterKeys 1 key: %x", key1)
 
-	key2 := encryption.DeriveKey(password1, salt1)
-	t.Logf("DeriveKey 2 key: %x", key2)
+	key2, _, _ := encryption.DeriveMasterKeys(password1, salt1)
+	t.Logf("DeriveMasterKeys 2 key: %x", key2)
 
 	// Ensure key1 and key2 are of equal length
 	if key1 != key2 {
-		t.Errorf("DeriveKey failed: expected %x and %x to be equal!", key1, key2)
+		t.Errorf("DeriveMasterKeys failed: expected %x and %x to be equal!", key1, key2)
 	}
 
 	// Derive key3 on salt2
@@ -61,14 +61,14 @@ func TestDeriveKey(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GenerateSalt (diff) failed in TestDeriveKey: %v", err)
 	}
-	key3 := encryption.DeriveKey(password1, salt2)
-	t.Logf("DeriveKey 3 key: %x", key3)
+	key3, _, _ := encryption.DeriveMasterKeys(password1, salt2)
+	t.Logf("DeriveMasterKeys 3 key: %x", key3)
 
 	if key1 == key3 {
-		t.Errorf("DeriveKey failed: expected %x and %x to differ since they have differet salt", key1, key3)
+		t.Errorf("DeriveMasterKeys failed: expected %x and %x to differ since they have differet salt", key1, key3)
 	}
 
 	// Derive key 4
-	key4 := encryption.DeriveKey(password2, salt2)
-	t.Logf("DeriveKey 4 key: %x", key4)
+	key4, _, _ := encryption.DeriveMasterKeys(password2, salt2)
+	t.Logf("DeriveMasterKeys 4 key: %x", key4)
 }

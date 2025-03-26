@@ -13,7 +13,7 @@ func TestEncryptDecrypt(t *testing.T) {
 		t.Fatalf("GenerateSalt failed in TestEncryptDecrypt: %v", err)
 	}
 
-	key := encryption.DeriveKey(password, salt)
+	key, _, _ := encryption.DeriveMasterKeys(password, salt)
 	t.Logf("Derived key: %s", key)
 
 	// Encrypt a sample plaintext
