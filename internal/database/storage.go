@@ -10,19 +10,37 @@ import (
 	_ "github.com/mattn/go-sqlite3" // REQUIRED - Used to init SQLite driver
 )
 
-// GetDatabasePath returns the OS-specific path for plockdb.sqlite
-func GetDatabasePath() string {
+// GetVaultDirectoryPath returns the vault directory path depending on OS
+func GetVaultDirectoryPath() string {
+	var vaultPath string
+
+	switch runtime.GOOS {
+	case "darwin": // MacOS
+		vaultPath = filepath.Join(os.Getenv("HOME"), "Library", "Application Support", "PassLock", "vaults")
+	case "linux":
+		vaultPath = filepath.Join(os.Getenv("HOME"), ".config", "passlock", "vaults")
+	case "windows":
+		vaultPath = filepath.Join(os.Getenv("APPDATA"), "PassLock", "vaults")
+	default:
+		vaultPath = "./vaults" // Fallback to current directory
+	}
+
+	return vaultPath
+}
+
+// GetDatabasePath returns the OS-specific path for a specific vault
+func GetDatabasePath(vaultName string) string {
 	var basePath string
 
 	switch runtime.GOOS {
 	case "darwin": // MacOS
-		basePath = filepath.Join(os.Getenv("HOME"), "Library", "Application Support", "PassLock")
+		basePath = filepath.Join(os.Getenv("HOME"), "Library", "Application Support", "PassLock", "vaults")
 	case "linux":
-		basePath = filepath.Join(os.Getenv("HOME"), ".config", "passlock")
+		basePath = filepath.Join(os.Getenv("HOME"), ".config", "passlock", "vaults")
 	case "windows":
-		basePath = filepath.Join(os.Getenv("APPDATA"), "PassLock")
+		basePath = filepath.Join(os.Getenv("APPDATA"), "PassLock", "vaults")
 	default:
-		basePath = "." // Fallback to current directory
+		basePath = "./vaults" // Fallback to current directory
 	}
 
 	// Ensure the directory exists
@@ -32,11 +50,11 @@ func GetDatabasePath() string {
 		return ""
 	}
 
-	return filepath.Join(basePath, "plockdb.sqlite")
+	return filepath.Join(basePath, vaultName+".sqlite")
 }
 
-func InitDB() (*sql.DB, error) {
-	dbPath := GetDatabasePath()
+func InitDB(vaultName string) (*sql.DB, error) {
+	dbPath := GetDatabasePath(vaultName)
 
 	// Check if the database exists; if not, create it
 	if _, err := os.Stat(dbPath); os.IsNotExist(err) {
@@ -79,4 +97,46 @@ func InitDB() (*sql.DB, error) {
 	}
 
 	return db, nil
+}
+
+// ListVaults lists all vaults in the vault directory
+func ListVaults() ([]string, error) {
+	vaultDir := GetVaultDirectoryPath()
+
+	// Read files in directory
+	files, err := os.ReadDir(vaultDir)
+	if err != nil {
+		return nil, err
+	}
+
+	// Iterate through files
+	var vaults []string
+	for _, file := range files {
+		if !file.IsDir() && filepath.Ext(file.Name()) == ".sqlite" {
+			vaultName := file.Name()[:len(file.Name())-len(".sqlite")] // Remove .sqlite extension
+			vaults = append(vaults, vaultName)
+		}
+	}
+
+	return vaults, nil
+}
+
+// DeleteVault deletes a specific vault given its file name
+func DeleteVault(vaultName string) error {
+	vaultPath := GetDatabasePath(vaultName)
+
+	// Check if vault exists
+	if _, err := os.Stat(vaultPath); os.IsNotExist(err) {
+		log.Printf("Error: vault %s does not exist", vaultName)
+		return err
+	}
+
+	// Attempt to remove vault
+	err := os.Remove(vaultPath)
+	if err != nil {
+		log.Printf("Error deleting vault: %v", err)
+		return err
+	}
+
+	return nil
 }
