@@ -1,10 +1,10 @@
 package main
 
 import (
-	"fmt"
+	"github.com/cpainter1/PassLock/ui"
 )
 
 func main() {
 	// TODO: Complete build logic
-	fmt.Print("Placeholder")
+	ui.RunApp()
 }
