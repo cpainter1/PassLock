@@ -2,6 +2,7 @@ package database
 
 import (
 	"database/sql"
+	"errors"
 	"log"
 )
 
@@ -218,4 +219,64 @@ func ClearDatabase(db *sql.DB) error {
 	}
 
 	return nil
+}
+
+// GetSaltFromVault returns the AuthKey salt from a given vault
+func GetSaltFromVault(vaultName string) (string, error) {
+	db, err := InitDB(vaultName)
+	if err != nil {
+		return "", err
+	}
+	defer func(db *sql.DB) {
+		err := db.Close()
+		if err != nil {
+			log.Printf("Error closing database: %v", err)
+		}
+	}(db)
+
+	var salt string
+	err = db.QueryRow("SELECT salt FROM vault_metadata WHERE vault_name = ?;", vaultName).Scan(&salt)
+	if err != nil {
+		log.Printf("Error reading vault metadata: %v", err)
+		return "", err
+	}
+
+	return salt, nil
+}
+
+// AuthenticateVault returns whether the user is authenticated for a specific vault given an authKey
+func AuthenticateVault(vaultName string, authKey string) (bool, error) {
+	db, err := InitDB(vaultName)
+	if err != nil {
+		return false, err
+	}
+	defer func(db *sql.DB) {
+		err := db.Close()
+		if err != nil {
+			log.Println(err)
+		}
+	}(db)
+
+	// Retrieve the stored authentication key for the given key
+	var storedAuthKey string
+	err = db.QueryRow("SELECT auth_key FROM vault_metadata WHERE vault_name = ?", vaultName).Scan(&storedAuthKey)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			// Vault does not exist
+			log.Printf("No vault found with name %s", vaultName)
+			return false, nil
+		}
+		log.Printf("Error retrieving metadata: %s", err)
+		return false, err
+	}
+
+	// Compare provided authKey with vault metadata authKey
+	verificationResult := authKey == storedAuthKey
+
+	if verificationResult {
+		return true, nil // Authenticated
+	} else {
+		log.Printf("Vault %s not authenticated", vaultName)
+		return false, nil
+	}
 }

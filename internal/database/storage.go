@@ -53,46 +53,88 @@ func GetDatabasePath(vaultName string) string {
 	return filepath.Join(basePath, vaultName+".sqlite")
 }
 
+// CreateVault creates an SQLite vault given vaultName and authentication key authKey
+func CreateVault(vaultName string, hashedAuthKey string, authKeySalt string) error {
+	dbPath := GetDatabasePath(vaultName)
+
+	// Ensure the vault does not already exist
+	if _, err := os.Stat(dbPath); err == nil {
+		log.Printf("Vault %s already exists", vaultName)
+		return nil
+	} else if !os.IsNotExist(err) {
+		return err
+	}
+
+	// Create the SQLite database file
+	file, err := os.OpenFile(dbPath, os.O_CREATE, 0600)
+	if err != nil {
+		log.Printf("Error creating database: %s", err)
+		return err
+	}
+	defer func(file *os.File) {
+		err := file.Close()
+		if err != nil {
+			log.Printf("Error closing database: %s", err)
+		}
+	}(file)
+
+	// Open the database
+	db, err := sql.Open("sqlite3", dbPath)
+	if err != nil {
+		log.Printf("Error opening database: %s", err)
+		return err
+	}
+
+	// Create necessary tables
+	createTableSQL := `
+	CREATE TABLE IF NOT EXISTS passwords (
+	    id INTEGER PRIMARY KEY AUTOINCREMENT,
+	    service TEXT NOT NULL,
+	    username TEXT NOT NULL,
+	    password TEXT NOT NULL, -- AES-256 encrypted
+	    notes TEXT,             -- Optional encrypted field
+	    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+	);
+	CREATE TABLE IF NOT EXISTS vault_metadata (
+	    vault_name TEXT PRIMARY KEY,
+	    auth_key TEXT NOT NULL,
+	    salt TEXT NOT NULL
+	);`
+
+	_, err = db.Exec(createTableSQL)
+	if err != nil {
+		log.Printf("Error creating table: %s", err)
+		return err
+	}
+
+	// Store the authentication key in vault_metadata
+	_, err = db.Exec(
+		"INSERT INTO vault_metadata (vault_name, auth_key, salt) VALUES (?, ?, ?)",
+		vaultName,
+		hashedAuthKey,
+		authKeySalt,
+	)
+	if err != nil {
+		log.Printf("Error inserting metadata: %s", err)
+		return err
+	}
+	return nil
+}
+
+// InitDB returns a database instance for an existing database
 func InitDB(vaultName string) (*sql.DB, error) {
 	dbPath := GetDatabasePath(vaultName)
 
-	// Check if the database exists; if not, create it
+	// Check if the database exists
 	if _, err := os.Stat(dbPath); os.IsNotExist(err) {
-		file, err := os.OpenFile(dbPath, os.O_CREATE, 0600)
-		if err != nil {
-			log.Printf("Error creating database: %s", err)
-			return nil, err
-		}
-
-		// Close the file
-		err = file.Close()
-		if err != nil {
-			log.Printf("Error closing file: %v", err)
-			return nil, err
-		}
+		log.Printf("Vault %s does not exist", vaultName)
+		return nil, err
 	}
 
 	// Open SQLite database
 	db, err := sql.Open("sqlite3", dbPath)
 	if err != nil {
-		log.Printf("Error opening database: %v", err)
-		return nil, err
-	}
-
-	// Create passwords table if it does not already exist
-	createTableSQL := `
-	CREATE TABLE IF NOT EXISTS passwords (
-		id INTEGER PRIMARY KEY AUTOINCREMENT,
-		service TEXT NOT NULL,
-		username TEXT NOT NULL,
-		password TEXT NOT NULL, -- AES-256 encrypted
-		notes TEXT,             -- Optional encrypted field
-		created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-	);`
-
-	_, err = db.Exec(createTableSQL)
-	if err != nil {
-		log.Printf("Error creating table: %v", err)
+		log.Printf("Error opening database: %s", err)
 		return nil, err
 	}
 
