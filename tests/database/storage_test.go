@@ -14,16 +14,22 @@ func TestGetDatabasePath(t *testing.T) {
 // TestListVaults
 func TestListVaults(t *testing.T) {
 	// Create sample vaults
-	_, err := database.InitDB("TestingVault1")
+	err := database.CreateVault("TestingVault1", "hashedKey1", "salt1")
+	if err != nil {
+		t.Errorf("Error creating vault: %v", err)
+	}
+	_, err = database.InitDB("TestingVault1")
 	if err != nil {
 		t.Errorf("Error connecting to database: %v", err)
 	}
 
+	err = database.CreateVault("TestingVault2", "hashedKey2", "salt2")
 	_, err = database.InitDB("TestingVault2")
 	if err != nil {
 		t.Errorf("Error connecting to database: %v", err)
 	}
 
+	err = database.CreateVault("TestingVault3", "hashedKey3", "salt3")
 	_, err = database.InitDB("TestingVault3")
 	if err != nil {
 		t.Errorf("Error connecting to database: %v", err)
