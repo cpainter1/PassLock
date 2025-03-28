@@ -58,5 +58,5 @@ PassLock will allow users to import and export password vault files.
 
 
 ### Early User Interface Images 💻
-![vault selection](assets/VaultSelection.png "vault selection")
-![vault creation](assets/CreateVault.png "vault creation")
+<img src="assets/VaultSelection.png" alt="vault selection" width="400">
+<img src="assets/CreateVault.png" alt="vault creation" width="400">
