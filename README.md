@@ -55,5 +55,8 @@ PassLock will allow users to import and export password vault files.
 - Users will be able to import this encrypted vault and provide a password to decrypt the vault.
   - This password will follow a very similar process as seen in the individual password encryption/decryption and hashing processes.
   - The file will be decrypted and stored in the internal PassLock system storage, renamed to a *.sqlite* file extension as opposed to the double-encrypted *.plockdb* extension.
-  
-  
+
+
+### Early User Interface Images 💻
+![vault selection](assets/VaultSelection.png "vault selection")
+![vault creation](assets/VaultCreation.png "vault creation")
